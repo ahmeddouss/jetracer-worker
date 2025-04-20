@@ -2,7 +2,6 @@ import threading
 import time
 import socket
 import subprocess
-from workers.wifi_watcher import watch_wifi_changes
 from workers.speaker import play_sound
 
 first_disconnect = True

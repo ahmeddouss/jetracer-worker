@@ -3,6 +3,7 @@ from pymongo.errors import PyMongoError
 import pprint
 from dotenv import load_dotenv
 import os
+import subprocess
 
 load_dotenv(".env")
 
@@ -22,7 +23,7 @@ def connect_to_wifi(ssid, password):
 
     except subprocess.CalledProcessError as e:
         print(f"Error connecting to Wi-Fi: {e}")
-        subprocess.run(["aplay",SOUND_SCAN])
+        subprocess.run(["aplay","jetracer_worker/sounds/error.wav"])
 
 
 def on_change(change):
