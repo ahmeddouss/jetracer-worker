@@ -2,29 +2,15 @@ from pymongo import MongoClient
 from bson import ObjectId
 from pymongo.errors import PyMongoError
 import pprint
-import subprocess
 from dotenv import load_dotenv
 import os
-
+from workers.wifi_scanner import connect_to_wifi
 load_dotenv(".env")
 
 MONGO_URI = os.getenv("MONGO_URI")
 DB_NAME = os.getenv("DB_NAME")
 COLLECTION_NAME = os.getenv("COLLECTION_NAME")
 DOCUMENT_ID = os.getenv("DOCUMENT_ID")
-
-
-def play_sound(file_path):
-    subprocess.run(["aplay", file_path])  # or `paplay` depending on your system
-
-def connect_to_wifi(ssid, password):
-    try:
-        print(f"📶 Connecting to Wi-Fi SSID: {ssid}")
-        subprocess.run(["nmcli", "dev", "wifi", "connect", ssid, "password", password], check=True)
-        play_sound("../sounds/connected.wav")
-    except subprocess.CalledProcessError as e:
-        print(f"❌ Error connecting to Wi-Fi: {e}")
-        play_sound("../sounds/error.wav")
 
 def on_change(change):
     operation_type = change.get("operationType")
@@ -48,8 +34,7 @@ def on_change(change):
                 connect_to_wifi(ssid, password)
             else:
                 print("⚠️ SSID or Password missing in update.")
-        else:
-            print("🫥 Update happened, but not in a watched field.")
+
 
     elif operation_type in ['insert', 'replace', 'delete']:
         print(f"Detected {operation_type} operation.")

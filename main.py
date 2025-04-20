@@ -3,11 +3,18 @@ import time
 import socket
 import subprocess
 from workers.wifi_watcher import watch_wifi_changes
+from workers.speaker import play_sound
+
+first_disconnect = True
 
 def on_disconnect():
-    global sensor_process, livekit_process
-
+    global sensor_process, livekit_process, first_disconnect
     print("⚠️ Internet connection lost!")
+    if first_disconnect:
+        play_sound("sounds/failed.wav")
+        first_disconnect = False
+    else:
+        play_sound("sounds/lost.wav")
     subprocess.Popen(["python3", "workers/wifi_scanner.py"])
     if sensor_process and sensor_process.poll() is None:
         sensor_process.terminate()
@@ -20,6 +27,7 @@ def on_disconnect():
 def on_connect():
     global sensor_process, livekit_process
     print("✅ Internet connection restored!")
+    play_sound("sounds/connected.wav")
     sensor_process = subprocess.Popen(["python3", "workers/sensors.py"])
     livekit_process = subprocess.Popen(["python3", "livekit_main.py"])
 
