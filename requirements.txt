@@ -1,6 +1,5 @@
 pyzbar
 pymongo
-subprocess
 
 gpiod
 Jetson.GPIO==2.1.9

@@ -3,7 +3,6 @@ from pymongo.errors import PyMongoError
 import pprint
 from dotenv import load_dotenv
 import os
-from jetracer_worker.workers.wifi_scanner import connect_to_wifi
 
 load_dotenv(".env")
 
@@ -16,6 +15,16 @@ DOCUMENT_ID = os.getenv("DOCUMENT_ID")
 last_ssid = None
 last_password = None
 
+def connect_to_wifi(ssid, password):
+    try:
+        print(f"Connecting to Wi-Fi SSID: {ssid}")
+        subprocess.run(["nmcli", "dev", "wifi", "connect", ssid, "password", password], check=True)
+
+    except subprocess.CalledProcessError as e:
+        print(f"Error connecting to Wi-Fi: {e}")
+        subprocess.run(["aplay",SOUND_SCAN])
+
+
 def on_change(change):
     global last_ssid, last_password
 
@@ -25,16 +34,17 @@ def on_change(change):
     # Only act on updates to document with _id == "robot"
     doc_id = change.get("documentKey", {}).get("_id")
     if doc_id != DOCUMENT_ID:
-        print(f"⚠️ Ignored update to document _id: {doc_id}")
+        print(f"   ^z         ^o Ignored update to document _id: {doc_id}")
         return
 
     if change.get("operationType") == "update":
         updated_fields = change.get("updateDescription", {}).get("updatedFields", {})
 
+
         # Check if watched fields are present
         watched_fields = ['wifiName', 'wifiPassword']
         if any(field in updated_fields for field in watched_fields):
-            print("🔧 Watched field updated!")
+            print("   ^=^t    Watched field updated!")
             print("Updated fields:", updated_fields)
 
             # Update only the changed ones
@@ -47,25 +57,25 @@ def on_change(change):
             if last_ssid and last_password:
                 connect_to_wifi(last_ssid, last_password)
             else:
-                print("⚠️ Waiting for both SSID and password to be set.")
+                print("   ^z         ^o Waiting for both SSID and password to be set.")
         else:
-            print("🫥 Update happened, but not in a watched field.")
+            print("   ^=       Update happened, but not in a watched field.")
     else:
         print(f"Detected {change.get('operationType')} operation. Ignored.")
 
-def watch_changes():
+def watch_wifi_changes():
     client = MongoClient(MONGO_URI)
     db = client[DB_NAME]
     collection = db[COLLECTION_NAME]
 
     try:
         with collection.watch(full_document='default') as change_stream:
-            print("🔍 Listening to changes in robot collection...")
+            print("   ^=^t^m Listening to changes in robot collection...")
             for change in change_stream:
                 on_change(change)
 
     except PyMongoError as e:
-        print("❌ Error watching collection:", e)
+        print("   ^}^l Error watching collection:", e)
 
 if __name__ == "__main__":
-    watch_changes()
+    watch_wifi_changes()

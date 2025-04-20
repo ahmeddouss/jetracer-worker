@@ -1,10 +1,10 @@
 # main.py
 import logging
 from livekit.agents import cli, WorkerOptions, JobRequest, AutoSubscribe
-from jetracer_worker.workers.jet_robot import JetRobot
-from jetracer_worker.workers.vision_assistant import VisionAssistant
+from workers.jet_robot import JetRobot
+from agent.vision_assistant import VisionAssistant
 from dotenv import load_dotenv
-from jetracer_worker.workers.speaker import play_sound
+from workers.speaker import play_sound
 
 import os
 load_dotenv(dotenv_path=".env")
@@ -29,7 +29,6 @@ async def request_fnc(req: JobRequest):
     await req.accept(name="robot", identity="robot")
 
 if __name__ == "__main__":
-    play_sound("jetracer_worker/sounds/ready.wav")
     cli.run_app(WorkerOptions(
         entrypoint_fnc=entrypoint,
         shutdown_process_timeout=15.0,
