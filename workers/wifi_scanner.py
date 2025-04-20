@@ -5,6 +5,7 @@ import sys
 import subprocess
 import re
 
+
 SOUND_CONNECTED = "../sounds/connected.wav"
 SOUND_ERROR = "../sounds/error.wav"
 SOUND_SCAN = "../sounds/scan.wav"

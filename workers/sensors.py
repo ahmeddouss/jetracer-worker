@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 
 print("Mode simulation activé - GPIO désactivé")
-load_dotenv(".env")
+load_dotenv("../.env")
 
 # Configuration MongoDB
 MONGO_URI = os.getenv("MONGO_URI")

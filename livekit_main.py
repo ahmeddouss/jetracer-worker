@@ -3,9 +3,13 @@ import logging
 from livekit.agents import cli, WorkerOptions, JobRequest, AutoSubscribe
 from workers.jet_robot import JetRobot
 from agent.vision_assistant import VisionAssistant
+from dotenv import load_dotenv
+
+load_dotenv(dotenv_path=".env")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 robot = JetRobot()
 

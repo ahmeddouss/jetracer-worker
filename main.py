@@ -8,7 +8,7 @@ def on_disconnect():
     global sensor_process, livekit_process
 
     print("⚠️ Internet connection lost!")
-    subprocess.Popen(["python3", "wifi_scanner.py"])
+    subprocess.Popen(["python3", "workers/wifi_scanner.py"])
     if sensor_process and sensor_process.poll() is None:
         sensor_process.terminate()
         sensor_process = None
@@ -20,8 +20,8 @@ def on_disconnect():
 def on_connect():
     global sensor_process, livekit_process
     print("✅ Internet connection restored!")
-    sensor_process = subprocess.Popen(["python3", "sensors.py"])
-    livekit_process = subprocess.Popen(["python3", "livekit.py"])
+    sensor_process = subprocess.Popen(["python3", "workers/sensors.py"])
+    livekit_process = subprocess.Popen(["python3", "livekit_main.py"])
 
 def check_internet():
     try:
