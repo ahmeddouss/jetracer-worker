@@ -1,12 +1,12 @@
 from pyzbar.pyzbar import decode
 import subprocess
 import re
-from workers.speaker import play_sound
+from jetracer_worker.workers.speaker import play_sound
 from jetcam.csi_camera import CSICamera
 
-SOUND_CONNECTED = "../sounds/connected.wav"
-SOUND_ERROR = "../sounds/error.wav"
-SOUND_SCAN = "../sounds/scan.wav"
+SOUND_CONNECTED = "jetracer_worker/sounds/connected.wav"
+SOUND_ERROR = "jetracer_worker/sounds/error.wav"
+SOUND_SCAN = "jetracer_worker/sounds/scan.wav"
 
 def parse_wifi_qr(qr_data):
     try:

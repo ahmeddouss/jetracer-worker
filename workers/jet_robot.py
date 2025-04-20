@@ -9,6 +9,7 @@ from livekit import rtc
 
 logger = logging.getLogger(__name__)
 
+
 class JetRobot:
     def __init__(self, width=640, height=480):
         self.width = width

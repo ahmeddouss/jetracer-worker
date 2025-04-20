@@ -1,10 +1,10 @@
 from pymongo import MongoClient
-from bson import ObjectId
 from pymongo.errors import PyMongoError
 import pprint
 from dotenv import load_dotenv
 import os
-from workers.wifi_scanner import connect_to_wifi
+from jetracer_worker.workers.wifi_scanner import connect_to_wifi
+
 load_dotenv(".env")
 
 MONGO_URI = os.getenv("MONGO_URI")
@@ -12,42 +12,55 @@ DB_NAME = os.getenv("DB_NAME")
 COLLECTION_NAME = os.getenv("COLLECTION_NAME")
 DOCUMENT_ID = os.getenv("DOCUMENT_ID")
 
+# Cache to store last known credentials
+last_ssid = None
+last_password = None
+
 def on_change(change):
-    operation_type = change.get("operationType")
+    global last_ssid, last_password
 
     print("\n--- Change Detected ---")
     pprint.pprint(change)
 
-    if operation_type == 'update':
+    # Only act on updates to document with _id == "robot"
+    doc_id = change.get("documentKey", {}).get("_id")
+    if doc_id != DOCUMENT_ID:
+        print(f"⚠️ Ignored update to document _id: {doc_id}")
+        return
+
+    if change.get("operationType") == "update":
         updated_fields = change.get("updateDescription", {}).get("updatedFields", {})
 
+        # Check if watched fields are present
         watched_fields = ['wifiName', 'wifiPassword']
         if any(field in updated_fields for field in watched_fields):
             print("🔧 Watched field updated!")
             print("Updated fields:", updated_fields)
 
-            # Extract values (or fall back to None)
-            ssid = updated_fields.get("wifiName")
-            password = updated_fields.get("wifiPassword")
+            # Update only the changed ones
+            if 'wifiName' in updated_fields:
+                last_ssid = updated_fields['wifiName']
+            if 'wifiPassword' in updated_fields:
+                last_password = updated_fields['wifiPassword']
 
-            if ssid and password:
-                connect_to_wifi(ssid, password)
+            # Only connect if both are available
+            if last_ssid and last_password:
+                connect_to_wifi(last_ssid, last_password)
             else:
-                print("⚠️ SSID or Password missing in update.")
+                print("⚠️ Waiting for both SSID and password to be set.")
+        else:
+            print("🫥 Update happened, but not in a watched field.")
+    else:
+        print(f"Detected {change.get('operationType')} operation. Ignored.")
 
-
-    elif operation_type in ['insert', 'replace', 'delete']:
-        print(f"Detected {operation_type} operation.")
-
-def watch_wifi_changes():
+def watch_changes():
     client = MongoClient(MONGO_URI)
     db = client[DB_NAME]
     collection = db[COLLECTION_NAME]
 
     try:
-        pipeline = [{"$match": {"documentKey._id": ObjectId(DOCUMENT_ID)}}]
-        with collection.watch(pipeline=pipeline, full_document='updateLookup') as change_stream:
-            print("🔍 Listening to changes in specific document...")
+        with collection.watch(full_document='default') as change_stream:
+            print("🔍 Listening to changes in robot collection...")
             for change in change_stream:
                 on_change(change)
 
@@ -55,4 +68,4 @@ def watch_wifi_changes():
         print("❌ Error watching collection:", e)
 
 if __name__ == "__main__":
-    watch_wifi_changes()
+    watch_changes()

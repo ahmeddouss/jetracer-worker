@@ -2,20 +2,22 @@ import threading
 import time
 import socket
 import subprocess
-from workers.wifi_watcher import watch_wifi_changes
-from workers.speaker import play_sound
+from jetracer_worker.workers.wifi_watcher import watch_wifi_changes
+from jetracer_worker.workers.speaker import play_sound
 
 first_disconnect = True
+sensor_process = None
+livekit_process = None
 
 def on_disconnect():
     global sensor_process, livekit_process, first_disconnect
     print("⚠️ Internet connection lost!")
     if first_disconnect:
-        play_sound("sounds/failed.wav")
+        play_sound("jetracer_worker/sounds/failed.wav")
         first_disconnect = False
     else:
-        play_sound("sounds/lost.wav")
-    subprocess.Popen(["python3", "workers/wifi_scanner.py"])
+        play_sound("jetracer_worker/sounds/lost.wav")
+    subprocess.Popen(["python3", "jetracer_worker/workers/wifi_scanner.py"])
     if sensor_process and sensor_process.poll() is None:
         sensor_process.terminate()
         sensor_process = None
@@ -25,11 +27,12 @@ def on_disconnect():
     
 
 def on_connect():
-    global sensor_process, livekit_process
+    global sensor_process, livekit_process, first_disconnect
+    first_disconnect = False
     print("✅ Internet connection restored!")
-    play_sound("sounds/connected.wav")
-    sensor_process = subprocess.Popen(["python3", "workers/sensors.py"])
-    livekit_process = subprocess.Popen(["python3", "livekit_main.py"])
+    play_sound("jetracer_worker/sounds/connected.wav")
+    sensor_process = subprocess.Popen(["python3", "jetracer_worker/workers/sensors.py"])
+    livekit_process = subprocess.Popen(["python3", "jetracer_worker/livekit_main.py","dev"])
 
 def check_internet():
     try:
