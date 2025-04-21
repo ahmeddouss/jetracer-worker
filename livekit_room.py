@@ -1,4 +1,3 @@
-# main.py
 import logging
 from livekit.agents import cli, WorkerOptions, JobRequest, AutoSubscribe
 from agent.jet_robot import JetRobot
@@ -28,8 +27,6 @@ async def request_fnc(req: JobRequest):
     await req.accept(name="robot", identity="robot")
 
 def start_robot_room():
-
-
     cli.run_app(WorkerOptions(
         entrypoint_fnc=entrypoint,
         shutdown_process_timeout=15.0,

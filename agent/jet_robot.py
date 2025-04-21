@@ -3,7 +3,8 @@ import asyncio
 import cv2
 import logging
 from livekit import rtc
-from workers.camera_motors import camera, car
+from workers.camera_motors import  send_frames, observe_camera, unobserve_camera
+
 
 logger = logging.getLogger(__name__)
 
@@ -12,8 +13,8 @@ class JetRobot:
     def __init__(self, width=640, height=480):
         self.width = width
         self.height = height
-        self.camera = camera
-        self.car = car
+        self.camera = None
+        self.car = None
         self.background_tasks = []
         self._video_source = None
         self._video_track = None
@@ -27,24 +28,13 @@ class JetRobot:
         except Exception as e:
             logger.error(f"Failed to parse data: {e}")
 
-    def send_frames(self, change):
-        frame_bgr = change['new']
-        frame_rgba = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGBA)
-        frame_bytes = bytearray(frame_rgba.flatten())
-        frame = rtc.VideoFrame(self.width, self.height, rtc.VideoBufferType.RGBA, frame_bytes)
-        self._video_source.capture_frame(frame)
-
-
-
     async def on_shutdown(self, reason=None):
         logger.info("🔻 Shutting down...")
-        #self.camera.running = False
-        self.camera.unobserve()
+        unobserve_camera()
         logger.info("✅ Shutdown complete.")
 
     async def start(self, ctx):
-        self.camera.running = True
-        self.camera.observe(lambda change: self.send_frames(self._video_source), names='value')
+        observe_camera(lambda change: send_frames(change, self._video_source, self.width, self.height))
 
         # Setup video source
         self._video_source = rtc.VideoSource(self.width, self.height)
