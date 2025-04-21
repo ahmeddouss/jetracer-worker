@@ -12,13 +12,11 @@ DOCUMENT_ID = os.getenv("DOCUMENT_ID")
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-car = None
-camera = None
-
-async def entrypoint(ctx, car, camera):
+# Globals to avoid passing unpickleable objects
+async def entrypoint(ctx):
     await ctx.connect(auto_subscribe=AutoSubscribe.SUBSCRIBE_ALL)
     if ctx.room.name.startswith(DOCUMENT_ID):
-        robot = JetRobot(car=car, camera=camera)
+        robot = JetRobot()
         await robot.start(ctx)
     play_sound("jetracer_worker/sounds/start.wav")
     if ctx.room.name.endswith("explore"):
@@ -29,9 +27,11 @@ async def entrypoint(ctx, car, camera):
 async def request_fnc(req: JobRequest):
     await req.accept(name="robot", identity="robot")
 
-def start_robot_room(car, camera):
+def start_robot_room():
+
+
     cli.run_app(WorkerOptions(
-        entrypoint_fnc=lambda ctx: entrypoint(ctx, car, camera),
+        entrypoint_fnc=entrypoint,
         shutdown_process_timeout=15.0,
         request_fnc=request_fnc,
         agent_name="robot",

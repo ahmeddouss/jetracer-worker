@@ -5,7 +5,6 @@ import signal
 import sys
 from workers.speaker import play_sound
 from livekit_room import start_robot_room
-# from workers.wifi_watcher import watch_wifi_changes
 from workers.camera_motors import camera, car
 
 started_camera = camera
@@ -83,7 +82,7 @@ signal.signal(signal.SIGTERM, signal_handler)
 # Start Internet monitor
 monitor_internet(on_disconnect, on_connect)
 
-start_robot_room(started_car, started_camera)
+start_robot_room()
 
 
 # Main loop

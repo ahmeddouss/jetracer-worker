@@ -3,6 +3,7 @@ import asyncio
 import cv2
 import logging
 from livekit import rtc
+from workers.camera_motors import camera, car
 
 logger = logging.getLogger(__name__)
 
@@ -11,8 +12,8 @@ class JetRobot:
     def __init__(self, width=640, height=480):
         self.width = width
         self.height = height
-        self.camera = None
-        self.car = None
+        self.camera = camera
+        self.car = car
         self.background_tasks = []
         self._video_source = None
         self._video_track = None
