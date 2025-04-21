@@ -78,5 +78,3 @@ def watch_wifi_changes():
     except PyMongoError as e:
         print("   ^}^l Error watching collection:", e)
 
-if __name__ == "__main__":
-    watch_wifi_changes()

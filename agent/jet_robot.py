@@ -2,9 +2,6 @@
 import asyncio
 import cv2
 import logging
-
-from jetcam.csi_camera import CSICamera
-from jetracer.nvidia_racecar import NvidiaRacecar
 from livekit import rtc
 
 logger = logging.getLogger(__name__)
@@ -20,49 +17,33 @@ class JetRobot:
         self._video_source = None
         self._video_track = None
 
-    def get_car(self):
-        if self.car is None:
-            self.car = NvidiaRacecar()
-            logger.info("🏎️  Racecar initialized.")
-        return self.car
 
     async def handle_data(self, data: rtc.DataPacket):
         try:
             x, y = [float(part.split(": ")[1]) for part in data.data.decode().split(", ")]
-            car = self.get_car()
-            car.steering, car.throttle = x, -y
+            self.car.steering, self.car.throttle = x, -y
             logger.info(f"Steering: {x:.3f}, Throttle: {-y:.3f}")
         except Exception as e:
             logger.error(f"Failed to parse data: {e}")
 
-    async def send_frames_loop(self, source):
-        while True:
-            await asyncio.sleep(0.1)
-            frame_bgr = self.camera.value
-            frame_rgba = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGBA)
-            frame_bytes = bytearray(frame_rgba.flatten())
-            frame = rtc.VideoFrame(self.width, self.height, rtc.VideoBufferType.RGBA, frame_bytes)
-            source.capture_frame(frame)
+    def send_frames(self, change):
+        frame_bgr = change['new']
+        frame_rgba = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGBA)
+        frame_bytes = bytearray(frame_rgba.flatten())
+        frame = rtc.VideoFrame(self.width, self.height, rtc.VideoBufferType.RGBA, frame_bytes)
+        self._video_source.capture_frame(frame)
+
+
 
     async def on_shutdown(self, reason=None):
         logger.info("🔻 Shutting down...")
-
-        if self.camera:
-            self.camera.running = False
-
-        for task in self.background_tasks:
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                pass
-
+        #self.camera.running = False
+        self.camera.unobserve()
         logger.info("✅ Shutdown complete.")
 
     async def start(self, ctx):
-        self.get_car()
-        self.camera = CSICamera(width=self.width, height=self.height)
         self.camera.running = True
+        self.camera.observe(lambda change: self.send_frames(self._video_source), names='value')
 
         # Setup video source
         self._video_source = rtc.VideoSource(self.width, self.height)
@@ -74,10 +55,9 @@ class JetRobot:
             video_codec=rtc.VideoCodec.H264,
         ))
 
+        
         # Start frame loop
-        task = asyncio.create_task(self.send_frames_loop(self._video_source))
-        self.background_tasks.append(task)
-
+        asyncio.create_task(self.send_frames_loop(self._video_source))
         ctx.add_shutdown_callback(self.on_shutdown)
 
         @ctx.room.on("data_received")

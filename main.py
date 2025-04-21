@@ -1,42 +1,34 @@
 import threading
 import time
 import socket
-import subprocess
+import signal
+import sys
 from workers.speaker import play_sound
+from livekit_room import start_robot_room
+# from workers.wifi_watcher import watch_wifi_changes
+from workers.camera_motors import camera, car
+
+started_camera = camera
+started_camera.running = True  # Start the camera
+started_car = car
 
 first_disconnect = True
-sensor_process = None
-livekit_process = None
-wifi_process = None
+should_exit = False  # Used to control main loop and threads
+
 
 def on_disconnect():
-    global sensor_process, livekit_process, wifi_process, first_disconnect
-    print("   ^z         ^o Internet connection lost!")
+    global first_disconnect
     if first_disconnect:
         play_sound("jetracer_worker/sounds/failed.wav")
         first_disconnect = False
     else:
         play_sound("jetracer_worker/sounds/lost.wav")
-    subprocess.Popen(["python3", "jetracer_worker/workers/wifi_scanner.py"])
-    if sensor_process and sensor_process.poll() is None:
-        sensor_process.terminate()
-        sensor_process = None
-    if wifi_process and wifi_process.poll() is None:
-        wifi_process.terminate()
-        wifi_process = None
-    if livekit_process and livekit_process.poll() is None:
-        livekit_process.terminate()
-        livekit_process = None
-    
+
 
 def on_connect():
-    global sensor_process, livekit_process, wifi_process, first_disconnect
+    global first_disconnect
     first_disconnect = False
-    print("   ^|^e Internet connection restored!")
     play_sound("jetracer_worker/sounds/connected.wav")
-    wifi_process = subprocess.Popen(["python3", "jetracer_worker/workers/wifi_watcher.py"])
-    sensor_process = subprocess.Popen(["python3", "jetracer_worker/workers/sensors.py"])
-    livekit_process = subprocess.Popen(["python3", "jetracer_worker/livekit_main.py","dev"])
 
 
 def check_internet():
@@ -46,6 +38,7 @@ def check_internet():
     except OSError:
         return False
 
+
 def monitor_internet(on_disconnect, on_connect, check_interval=5):
     def monitor():
         was_connected = check_internet()
@@ -54,7 +47,7 @@ def monitor_internet(on_disconnect, on_connect, check_interval=5):
         else:
             on_disconnect()
 
-        while True:
+        while not should_exit:
             time.sleep(check_interval)
             connected = check_internet()
             if connected != was_connected:
@@ -66,13 +59,36 @@ def monitor_internet(on_disconnect, on_connect, check_interval=5):
 
     thread = threading.Thread(target=monitor, daemon=True)
     thread.start()
+    return thread
 
-#    ^=^t    Usage
+
+def cleanup():
+    print("Cleaning up...")
+    started_camera.running = False
+    # Add any other cleanup logic here (e.g., stopping motors, saving logs, etc.)
+    sys.exit(0)
+
+
+def signal_handler(sig, frame):
+    global should_exit
+    print("\nReceived Ctrl+C, exiting...")
+    should_exit = True
+    cleanup()
+
+
+# Attach the signal handler
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
+
+# Start Internet monitor
 monitor_internet(on_disconnect, on_connect)
 
+start_robot_room(started_car, started_camera)
 
 
-#    ^=^t^b Your main app logic here
-print("   ^=^=    Monitoring internet in the background...")
-while True:
-    time.sleep(1)
+# Main loop
+try:
+    while not should_exit:
+        time.sleep(1)
+except KeyboardInterrupt:
+    signal_handler(None, None)
